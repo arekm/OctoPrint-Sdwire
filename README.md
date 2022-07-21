@@ -34,7 +34,7 @@ apt-get install libpopt-dev libftdi1-dev
 
 ````
 git clone https://git.tizen.org/cgit/tools/testlab/sd-mux
-mkdir sd-mux/build && cd sd-mux-build && cmake ../ && make
+mkdir sd-mux/build && cd sd-mux/build && cmake ../ && make
 ````
 
 * place `/build/src/sd-mux-ctrl` binary in `/usr/local/sbin/sd-mux-ctrl` on your host machine (on in different location)
@@ -74,7 +74,8 @@ Number of FTDI devices found: 0
 and you need to configure sdwire hardware:
 
 ````
-sudo sd-mux-ctrl --device-serial=DP2W3TJ6 --vendor=0x0403 --product=0x6015 --device-type=sd-wire --set-serial=sd-wire_11
+sudo sd-mux-ctrl --device-serial=DP2W3TJ6 --vendor=0x0403 --product=0x6015 \
+    --device-type=sd-wire --set-serial=sd-wire_11
 ````
 
 where `device-serial`, `vendor`, `product` are values found in dmesg. `set-serial` is additional serial number you want to
@@ -112,9 +113,9 @@ Go to _Settings_ and under _Plugins_ you will find a new entry _Sdwire_. Fill al
 
 ### e. Use plugin
 
-Disconnect and connect printer from octoprint (optional, gets sdwire into consistent state) and you are ready to go.
+Disconnect and connect printer from octoprint (optional, only after plugin installation - gets sdwire into consistent state) and you are ready to go.
 
-Use `Upload to SD` to test writting to sdwire sd card.
+Use `Upload to SD` `OctoPrint` functionality to test writting to sdwire sd card.
 
 
 ## Documentation and links
