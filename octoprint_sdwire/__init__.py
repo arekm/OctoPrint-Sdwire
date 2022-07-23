@@ -85,11 +85,10 @@ class SdwirePlugin(octoprint.plugin.SettingsPlugin,
         return True
 
     def _check_printer_state(self, notify=False):
-        printer_state = self._printer.get_state_string()
-        if printer_state.lower() != "operational":
-            self._logger.info("Printer is not ready or sd card is busy (in {} state)".format(printer_state))
+        if not self._printer.is_ready():
+            self._logger.info("Printer is not ready or sd card is in use")
             if notify:
-                self.sdwrite_notify_error("Printer is not ready or sd card is busy (in {} state)".format(printer_state))
+                self.sdwrite_notify_error("Printer is not ready or sd card is in use")
             return False
         return True
 
