@@ -10,8 +10,10 @@ connector* to connect to host (like raspberry pi or other Linux based system).
 
 ![title](screenshots/sdwire-hw.jpg "sdwire hardware")
 
-Inserted sd card can be then made visible to the 3d printer or to the USB host (as regular usb-storage).
-Copying to sd card from raspberry pi host using sdwire is fast (~10MB/s) compared to 115.2k serial port (~3KB/s; serial port slowness and g-code protocol overhead).
+3d printers (almost every commonly available 3d printer) use serial connection to host (over USB cable) which is very slow.
+With sdwire inserted sd card can be made visible to the 3d printer or to the USB host (as regular usb-storage).
+Copying to sd card from raspberry pi host using sdwire is fast (~10MB/s) compared to 115.2k serial port
+(~3KB/s; serial port slowness and g-code protocol overhead).
 
 ## Setup
 
@@ -37,11 +39,15 @@ git clone https://git.tizen.org/cgit/tools/testlab/sd-mux
 mkdir sd-mux/build && cd sd-mux/build && cmake ../ && make
 ````
 
-* place `/build/src/sd-mux-ctrl` binary in `/usr/local/sbin/sd-mux-ctrl` on your host machine (on in different location)
+* place `build/src/sd-mux-ctrl` binary in `/usr/local/sbin/sd-mux-ctrl` on your host machine (or in different location) or just run:
+
+```
+make install
+```
 
 ### b. setup serial number for sd-wire device
 
-* onnect sd-wire device to host using micro-USB--USB cable
+* connect sd-wire device to host using micro-USB--USB cable
 * check dmesg for output like:
 
 ````
@@ -55,7 +61,7 @@ mkdir sd-mux/build && cd sd-mux/build && cmake ../ && make
 * check if sd-wire device is visible
 
 ````
-sudo  sd-mux-ctrl --list
+sudo sd-mux-ctrl --list
 ````
 
 If it is then output should look like:
