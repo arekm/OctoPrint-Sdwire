@@ -23,27 +23,21 @@
         </div>
     </div>
 
-    <div class="control-group">
-        <label class="control-label">{{ _('Debugging') }}</label>
-        <div class="controls">
-            <input type="checkbox" data-bind="checked: settings.plugins.sdwire.debug_logging">{{ _('Enable debug logging') }}
-        </div>
-    </div>
-<p>
-Create /etc/sudoers.d/octoprint-plugin-sdwrite file with content and adjust paths:
+    <p>
+        Create /etc/sudoers.d/octoprint-plugin-sdwrite file with content and adjust paths:
 
-<code>
-pi ALL=NOPASSWD: /usr/bin/mount<br/>
-pi ALL=NOPASSWD: /usr/bin/umount<br/>
-pi ALL=NOPASSWD: /usr/local/bin/sd-mux-ctrl<br/>
-</code>
-</p>
+        <code>
+            pi ALL=NOPASSWD: /usr/bin/mount<br/>
+            pi ALL=NOPASSWD: /usr/bin/umount<br/>
+            pi ALL=NOPASSWD: /usr/local/bin/sd-mux-ctrl<br/>
+        </code>
+    </p>
 
-<p>Plugin is expecting binaries at paths:
-/usr/sbin/blkid<br/>
-/usr/bin/mount<br/>
-/usr/bin/umount<br/>
-/usr/bin/sudo<br/>
-</p>
+    <p>Plugin is expecting binaries at paths:
+        /usr/sbin/blkid<br/>
+        /usr/bin/mount<br/>
+        /usr/bin/umount<br/>
+        /usr/bin/sudo<br/>
+    </p>
 
 </form>

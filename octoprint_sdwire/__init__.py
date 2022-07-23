@@ -26,11 +26,6 @@ class SdwirePlugin(octoprint.plugin.SettingsPlugin,
     def on_after_startup(self):
         self._logger.info("OctoPrint-Sdwire loaded (sdwire_serial={}, disk_uuid={})".format(self._settings.get(["sdwire_serial"]), self._settings.get(["disk_uuid"])))
 
-        if self._settings.get_boolean(["debug_logging"]):
-            self._logger.setLevel(logging.DEBUG)
-        else:
-            self._logger.setLevel(logging.INFO)
-
         if self._check_printer_state():
             self.sdwire_switch(mode="usb")
             self.sdwire_switch(mode="sd")
@@ -48,21 +43,8 @@ class SdwirePlugin(octoprint.plugin.SettingsPlugin,
     def get_settings_defaults(self):
         return dict(sd_mux_ctrl="/usr/local/bin/sd-mux-ctrl",
                 sdwire_serial="sd-wire_11",
-                disk_uuid="",
-		debug_logging=False,
+                disk_uuid=""
                 )
-
-    def on_settings_save(self, data):
-        old_debug_logging = self._settings.get_boolean(["debug_logging"])
-
-        octoprint.plugin.SettingsPlugin.on_settings_save(self, data)
-
-        new_debug_logging = self._settings.get_boolean(["debug_logging"])
-        if old_debug_logging != new_debug_logging:
-            if new_debug_logging:
-                self._logger.setLevel(logging.DEBUG)
-            else:
-                self._logger.setLevel(logging.INFO)
 
     def get_template_configs(self):
         return [{"type": "settings", "custom_bindings": False}]
