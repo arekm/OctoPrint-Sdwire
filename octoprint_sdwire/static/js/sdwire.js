@@ -19,7 +19,11 @@ $(function() {
 		}
 
 		if (data.hasOwnProperty("progress")) {
-			self.filesViewModel._setProgressBar(data["progress"], 'Uploading to sdwire - ' + data["progress"] + '%...', false);
+                        if (data["progress"] == -1) {
+                            self.filesViewModel._setProgressBar(0, "", false);
+                        } else {
+			    self.filesViewModel._setProgressBar(data["progress"], 'Uploading to sdwire - ' + data["progress"] + '%...', false);
+                        }
 		}
 
                 if (data.hasOwnProperty("error")) {

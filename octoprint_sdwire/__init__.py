@@ -189,6 +189,7 @@ class SdwirePlugin(octoprint.plugin.SettingsPlugin,
                 sdwire_mount()
                 sdwire_copyfile(path, os.path.join(self.mdir.name, remote_filename), sdwire_set_progress)
                 sdwire_umount()
+                sdwire_set_progress(-1)
 
             except Exception as e:
                 failure_cb(filename, remote_filename, int(time.time() - start_time))
