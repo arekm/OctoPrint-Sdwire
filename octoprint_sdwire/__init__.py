@@ -186,6 +186,7 @@ class SdwirePlugin(octoprint.plugin.SettingsPlugin,
             start_time = time.time()
             try:
 
+                sdwire_set_progress(0)
                 sdwire_mount()
                 sdwire_copyfile(path, os.path.join(self.mdir.name, remote_filename), sdwire_set_progress)
                 sdwire_umount()
