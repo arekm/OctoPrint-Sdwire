@@ -183,23 +183,25 @@ class SdwirePlugin(octoprint.plugin.SettingsPlugin,
             self.mdir.cleanup()
 
         def sdwire_run_upload():
-
-            start_time = time.time()
             try:
+                start_time = time.time()
+                try:
 
-                uuid = self._settings.get(["disk_uuid"])
-                sdwire_set_progress(0)
-                sdwire_mount(uuid)
-                sdwire_copyfile(path, os.path.join(self.mdir.name, remote_filename), sdwire_set_progress)
-                sdwire_umount(uuid)
+                    uuid = self._settings.get(["disk_uuid"])
+                    sdwire_set_progress(0)
+                    sdwire_mount(uuid)
+                    sdwire_copyfile(path, os.path.join(self.mdir.name, remote_filename), sdwire_set_progress)
+                    sdwire_umount(uuid)
 
+                except Exception as e:
+                    failure_cb(filename, remote_filename, int(time.time() - start_time))
+                    self._logger.exception("Uploading to sdwire failed: {}".format(e))
+                    self.sdwrite_notify_error("Uploading to sdwire failed: {}".format(e))
+
+                self._logger.info("Upload of {} done in {:.2f}s".format(remote_filename, time.time() - start_time))
+                success_cb(filename, remote_filename, int(time.time() - start_time))
             except Exception as e:
-                failure_cb(filename, remote_filename, int(time.time() - start_time))
-                self._logger.exception("Uploading to sdwire failed: {}".format(e))
-                self.sdwrite_notify_error("Uploading to sdwire failed: {}".format(e))
-
-            self._logger.info("Upload of {} done in {:.2f}s".format(remote_filename, time.time() - start_time))
-            success_cb(filename, remote_filename, int(time.time() - start_time))
+                self._logger.exception("Unknown problem: {}".format(e))
 
         thread = threading.Thread(target = sdwire_run_upload)
         thread.daemon = True
