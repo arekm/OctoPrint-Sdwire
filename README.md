@@ -122,7 +122,7 @@ sudo sd-mux-ctrl --device-serial=DP2W3TJ6 --vendor=0x0403 --product=0x6015 \
 where `device-serial`, `vendor`, `product` are values found in dmesg. `set-serial` is additional serial number you want to
 assign to sdwire. This additional serial will be needed in _Sdwire_ _Settings_.
 
-### c. Get UUID of micro sd card that is going to be used
+### c. Get UUID of filesystem on micro sd card that is going to be used
 
 Insert `micro sd card` into `sdwire` device, tell `sdwire` to provide sd card as usb-storage to the host:
 
@@ -138,7 +138,7 @@ and see if sd card becomes available in your system by looking into `dmesg`:
 [380921.075036] sd 0:0:0:0: [sda] Attached SCSI removable disk
 ````
 
-Get UUID of inserted sd card:
+Get UUID of filesystem on inserted sd card:
 
 ````
 # blkid
