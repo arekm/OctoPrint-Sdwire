@@ -147,7 +147,7 @@ class SdwirePlugin(octoprint.plugin.SettingsPlugin,
                     return copied
             return False
 
-        def sdwire_mount():
+        def sdwire_mount(uuid):
             self.mdir = tempfile.TemporaryDirectory()
             self.mdir_name = self.mdir.name
             if not self.sdwire_switch(mode="usb"):
@@ -157,27 +157,28 @@ class SdwirePlugin(octoprint.plugin.SettingsPlugin,
             # wait for device for 5s
             disk = None
             for i in range(0, 50):
-                disk = self._run_cmd(["/usr/sbin/blkid", "-U", self._settings.get(["disk_uuid"])])
+                disk = self._run_cmd(["/usr/sbin/blkid", "-U", uuid])
                 if disk:
                     break
                 time.sleep(0.1)
 
             if disk:
-                self._logger.debug("Disk found for UUID: {}".format(self._settings.get(["disk_uuid"])))
+                self._logger.debug("Disk found for UUID: {}".format(uuid))
             else:
-                self._logger.info("SD card UUID {} was not found in the system!".format(self._settings.get(["disk_uuid"])))
-                self.sdwrite_notify_error("SD card UUID {} was not found in the system!".format(self._settings.get(["disk_uuid"])))
+                self._logger.info("SD card UUID {} was not found in the system!".format(uuid))
+                self.sdwrite_notify_error("SD card UUID {} was not found in the system!".format(uuid))
                 return False
 
             self._logger.debug("Mounting sdwire SD Card")
-            if not self._run_cmd(["/usr/bin/sudo",  "/usr/bin/mount", "UUID={}".format(self._settings.get(["disk_uuid"])), self.mdir_name, "-o", "uid=%d" % os.getuid()]):
-                self.sdwrite_notify_error("Mounting SD card with UUID {} failed.".format(self._settings.get(["disk_uuid"])))
+            if not self._run_cmd(["/usr/bin/sudo",  "/usr/bin/mount", "UUID={}".format(uuid), self.mdir_name, "-o", "uid={}".format(os.getuid())]):
+                self.sdwrite_notify_error("Mounting SD card with UUID {} failed.".format(uuid))
                 return False
             self._logger.debug("Sdwire mounted")
 
-        def sdwire_umount():
+        def sdwire_umount(uuid):
             self._logger.debug("Umounting sdwire")
-            self._run_cmd(["/usr/bin/sudo", "/usr/bin/umount", self.mdir_name])
+            if not self._run_cmd(["/usr/bin/sudo", "/usr/bin/umount", "UUID={}".format(uuid)]):
+                    self._run_cmd(["/usr/bin/sudo", "/usr/bin/umount", self.mdir_name])
             self.sdwire_switch(mode="sd")
             self.mdir.cleanup()
 
@@ -186,10 +187,11 @@ class SdwirePlugin(octoprint.plugin.SettingsPlugin,
             start_time = time.time()
             try:
 
+                uuid = self._settings.get(["disk_uuid"])
                 sdwire_set_progress(0)
-                sdwire_mount()
+                sdwire_mount(uuid)
                 sdwire_copyfile(path, os.path.join(self.mdir.name, remote_filename), sdwire_set_progress)
-                sdwire_umount()
+                sdwire_umount(uuid)
                 sdwire_set_progress(-1)
 
             except Exception as e:
