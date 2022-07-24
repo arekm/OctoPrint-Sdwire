@@ -192,14 +192,13 @@ class SdwirePlugin(octoprint.plugin.SettingsPlugin,
                 sdwire_mount(uuid)
                 sdwire_copyfile(path, os.path.join(self.mdir.name, remote_filename), sdwire_set_progress)
                 sdwire_umount(uuid)
-                sdwire_set_progress(-1)
 
             except Exception as e:
                 failure_cb(filename, remote_filename, int(time.time() - start_time))
                 self._logger.exception("Uploading to sdwire failed: {}".format(e))
                 self.sdwrite_notify_error("Uploading to sdwire failed: {}".format(e))
 
-            self._logger.info("Upload of {} done in {:.2f}s".format((remote_filename, time.time() - start_time)))
+            self._logger.info("Upload of {} done in {:.2f}s".format(remote_filename, time.time() - start_time))
             success_cb(filename, remote_filename, int(time.time() - start_time))
 
         thread = threading.Thread(target = sdwire_run_upload)
