@@ -15,6 +15,41 @@ With sdwire inserted sd card can be made visible to the 3d printer or to the USB
 Copying to sd card from raspberry pi host using sdwire is fast (~10MB/s) compared to 115.2k serial port
 (~3KB/s; serial port slowness and g-code protocol overhead).
 
+## Numbers
+
+Example uploading of `100MB .gcode` file to SD card.
+
+### Upload to SD using sdwire hardware
+
+Upload in octoprint consist of a few phases. When you click on `Upload to SD` what happens is:
+
+* `Uploading` from computer to octoprint. In my case over wifi to raspberry 3B running octoprint - 27s
+* `Saving` is when octoprint and installed plugins process uploaded file (depends on plugins etc) - 3s
+
+Above phases are outside of `sdwrite` plugin control. Now `octoprint` activates `sdwire` plugin:
+
+* `Streaming` phase (plugin will show `Uploading to sdwire` on progress bar) where sdwire hardware
+  is switched from 3d printer to usb-storage, file is copied from octoprint disk (raspberry pi sd card)
+  to sd card in 3d printer and finally sdwire hardware switches back to 3d printer - *14s*
+
+### Upload to SD using serial port (over USB) without sdwire hardware
+
+Most of popular 3d printers (like Prusa MK3S+) connect to octoprint host using 115.2k serial port (over USB). In such setup
+'Uploading' and 'Saving' phases take the same time amount. Third 'Streaming' phase would take about *10 hours* to upload
+100MB gcode file.
+
+## Why uploading to sd card and not printing over USB?
+
+With `Prusa MK3S+` and printing from octoprint over USB I was getting:
+* layer shifts in random moments. Happened to me few times and also happens to other people (according to google search)
+* g-code commands silently not executed (https://github.com/prusa3d/Prusa-Firmware/issues/3541)
+* worse quality of prints (slightly but still). Probably due to latency issues over serial.
+
+Other people reported slower printing times over USB than SD card:
+* https://www.youtube.com/watch?v=vZbHGe4AOPg
+
+These issues do not happen when printing from SD card.
+
 ## Setup
 
 Install via the bundled [Plugin Manager](https://docs.octoprint.org/en/master/bundledplugins/pluginmanager.html)
