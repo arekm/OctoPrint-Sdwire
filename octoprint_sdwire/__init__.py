@@ -197,11 +197,13 @@ class SdwirePlugin(octoprint.plugin.SettingsPlugin,
                     failure_cb(filename, remote_filename, int(time.time() - start_time))
                     self._logger.exception("Uploading to sdwire failed: {}".format(e))
                     self.sdwrite_notify_error("Uploading to sdwire failed: {}".format(e))
-
-                self._logger.info("Upload of {} done in {:.2f}s".format(remote_filename, time.time() - start_time))
-                success_cb(filename, remote_filename, int(time.time() - start_time))
+                else:
+                    self._logger.info("Upload of {} done in {:.2f}s".format(remote_filename, time.time() - start_time))
+                    success_cb(filename, remote_filename, int(time.time() - start_time))
             except Exception as e:
+                failure_cb(filename, remote_filename, int(time.time() - start_time))
                 self._logger.exception("Unknown problem: {}".format(e))
+                self.sdwrite_notify_error("Unknown problem: {}".format(e))
 
         thread = threading.Thread(target = sdwire_run_upload)
         thread.daemon = True
