@@ -82,6 +82,9 @@ make install
 
 ### b. setup serial number for sd-wire device
 
+* **WARNING: DO NOT MANIPULATE WITH `sd-mux-ctrl` ON NON `sdwire` HARDWARE**.
+ `sd-mux-ctrl` reconfigures EEPROM of `FTDI` serial chip. That chip is used not only in `sdwire` hardware but also in many other devices,
+  so you can easily break configuration of `FTDI` chipset in your other hardware
 * connect sd-wire device to host using micro-USB--USB cable
 * check dmesg for output like:
 
