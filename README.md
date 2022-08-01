@@ -8,6 +8,8 @@ to handle *fast* "Upload to SD".
 `sdwire` is a device with *micro sd card* (inserted into it), *micro sd connector* (inserted into 3d printer) and a *micro USB
 connector* to connect to host (like raspberry pi or other Linux based system).
 
+**THIS DEVICE IS REQUIRED FOR PLUGIN TO WORK**
+
 ![title](screenshots/sdwire-hw.jpg "sdwire hardware")
 
 3d printers (almost every commonly available 3d printer) use serial connection to host (over USB cable) which is very slow.
@@ -26,7 +28,7 @@ Upload in octoprint consist of a few phases. When you click on `Upload to SD` wh
 * `Uploading` from computer to octoprint. In my case over wifi to raspberry 3B running octoprint - 27s
 * `Saving` is when octoprint and installed plugins process uploaded file (depends on plugins etc) - 3s
 
-Above phases are outside of `sdwrite` plugin control. Now `octoprint` activates `sdwire` plugin:
+Above phases are outside of `sdwite` plugin control. Now `octoprint` activates `sdwire` plugin:
 
 * `Streaming` phase (plugin will show `Uploading to sdwire` on progress bar) where sdwire hardware
   is switched from 3d printer to usb-storage, file is copied from octoprint disk (raspberry pi sd card)
