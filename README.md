@@ -204,3 +204,30 @@ Duplicate backend and frontend in haproxy config, on different
 port, with different names, add above reqrep lines to duplicate
 backend and configure PrusaSlicer physical printer with
 host:that_port.
+
+Example, ports 1080 for http and 1443 for https:
+
+```
+frontend public-ps
+        bind :::1080 v4v6
+        bind :::1443 v4v6 ssl crt /etc/ssl/snakeoil.pem
+        option forwardfor except 127.0.0.1
+        use_backend webcam if { path_beg /webcam/ }
+        use_backend webcam_hls if { path_beg /hls/ }
+        use_backend webcam_hls if { path_beg /jpeg/ }
+        default_backend octoprint-ps
+
+backend octoprint-ps
+        acl needs_scheme req.hdr_cnt(X-Scheme) eq 0
+
+        reqrep ^([^\ :]*)\ /api/files/local\ (.*)    \1\ /api/files/sdcard\ \2
+        reqrep ^([^\ :]*)\ /api/files/local/(.*)     \1\ /api/files/sdcard/\2
+
+        reqrep ^([^\ :]*)\ /(.*) \1\ /\2
+        reqadd X-Scheme:\ https if needs_scheme { ssl_fc }
+        reqadd X-Scheme:\ http if needs_scheme !{ ssl_fc }
+        option forwardfor
+        server octoprint2 127.0.0.1:5000
+        errorfile 503 /etc/haproxy/errors/503-no-octoprint.http
+```
+
