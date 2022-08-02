@@ -169,3 +169,38 @@ Use `Upload to SD` `OctoPrint` functionality to test writting to sdwire sd card.
 * [sdwire description](https://wiki.tizen.org/SDWire)
 * [sd-mux-ctl software](https://git.tizen.org/cgit/tools/testlab/sd-mux/)
 * [sdwire setup and usage](https://docs.dasharo.com/transparent-validation/sd-wire/getting-started/)
+
+## Octoprint - redirecting all `api/files/local` calls to `api/files/sdcard`
+
+`PrusaSlicer` on `Upload` and `Upload and Print` physical printer commands can only use `api/files/local` (uploading to raspberry pi and printing over USB). With `sdwire` it makes more sense to upload to `sd card` and start print from there.
+
+This change redirects all `local` calls to `sdcard` calls.
+
+
+```diff
+--- /etc/haproxy/haproxy.cfg	2022-08-02 23:39:54.140947758 +0200
++++ /etc/haproxy/haproxy.cfg	2022-08-02 23:38:30.572050242 +0200
+@@ -32,6 +32,9 @@ frontend public
+ backend octoprint
+         acl needs_scheme req.hdr_cnt(X-Scheme) eq 0
+ 
++        reqrep ^([^\ :]*)\ /api/files/local\ (.*)    \1\ /api/files/sdcard\ \2
++        reqrep ^([^\ :]*)\ /api/files/local/(.*)     \1\ /api/files/sdcard/\2
++
+         reqrep ^([^\ :]*)\ /(.*) \1\ /\2
+         reqadd X-Scheme:\ https if needs_scheme { ssl_fc }
+         reqadd X-Scheme:\ http if needs_scheme !{ ssl_fc }
+```
+
+And haproxy restart:
+
+````
+systemctl restart haproxy
+````
+
+There is also a solution If you want to keep `local` API available but still get `PrusaSlicer` to upload and print from sd card.
+
+Duplicate backend and frontend in haproxy config, on different
+port, with different names, add above reqrep lines to duplicate
+backend and configure PrusaSlicer physical printer with
+host:that_port.
