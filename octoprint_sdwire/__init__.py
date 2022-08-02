@@ -101,9 +101,11 @@ class SdwirePlugin(octoprint.plugin.SettingsPlugin,
             start_cb, success_cb, failure_cb,
             *args, **kwargs):
 
-        # remote_filename = printer._get_free_remote_name(filename)
-        # we are not limited by 8.3 characters
-        remote_filename = filename
+        # Assume long file names support. Far from perfect way.
+        if printer._comm._capability_supported(printer._comm.CAPABILITY_EXTENDED_M20):
+            remote_filename = filename
+        else:
+            remote_filename = printer._get_free_remote_name(filename)
 
         if not self._settings.get(["disk_uuid"]):
             self.sdwrite_notify_error("SD card UUID was not configured!")
@@ -198,7 +200,7 @@ class SdwirePlugin(octoprint.plugin.SettingsPlugin,
                     self._logger.exception("Uploading to sdwire failed: {}".format(e))
                     self.sdwrite_notify_error("Uploading to sdwire failed: {}".format(e))
                 else:
-                    self._logger.info("Upload of {} done in {:.2f}s".format(remote_filename, time.time() - start_time))
+                    self._logger.info("Upload of {} as {} done in {:.2f}s".format(filename, remote_filename, time.time() - start_time))
                     success_cb(filename, remote_filename, int(time.time() - start_time))
             except Exception as e:
                 failure_cb(filename, remote_filename, int(time.time() - start_time))
