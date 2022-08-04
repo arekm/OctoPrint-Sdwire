@@ -22,6 +22,7 @@ class SdwirePlugin(octoprint.plugin.SettingsPlugin,
         super(SdwirePlugin, self).__init__()
         self._logger = logging.getLogger("octoprint.plugins.sdwire")
         self.started = False
+        self.lfn = False
 
     def on_after_startup(self):
         self._logger.info("OctoPrint-Sdwire loaded (sdwire_serial={}, disk_uuid={})".format(self._settings.get(["sdwire_serial"]), self._settings.get(["disk_uuid"])))
@@ -74,6 +75,10 @@ class SdwirePlugin(octoprint.plugin.SettingsPlugin,
             return False
         return True
 
+    def _get_remote_filename(self, filename):
+        files = self._printer.get_sd_files(refresh=True)
+        return next((item['name'] for item in files if item['display'] == filename and item['name']), filename)
+
     def sdwrite_notify_error(self, message):
         self._plugin_manager.send_plugin_message(self._identifier, dict(error=message))
 
@@ -101,11 +106,13 @@ class SdwirePlugin(octoprint.plugin.SettingsPlugin,
             start_cb, success_cb, failure_cb,
             *args, **kwargs):
 
-        # Assume long file names support. Far from perfect way.
+        # Assume long file names support.
         if printer._comm._capability_supported(printer._comm.CAPABILITY_EXTENDED_M20):
-            remote_filename = filename
+            remote_filename = return_filename = filename
+            self.lfn = True
         else:
-            remote_filename = printer._get_free_remote_name(filename)
+            remote_filename = return_filename = printer._get_free_remote_name(filename)
+            self.lfn = False
 
         if not self._settings.get(["disk_uuid"]):
             self.sdwrite_notify_error("SD card UUID was not configured!")
@@ -195,13 +202,18 @@ class SdwirePlugin(octoprint.plugin.SettingsPlugin,
                     sdwire_copyfile(path, os.path.join(self.mdir.name, remote_filename), sdwire_set_progress)
                     sdwire_umount(uuid)
 
+                    # We try to return short file name to octoprint anyway because
+                    # most firmwares don't support things like M23 with long filename.
+                    if self.lfn:
+                        return_filename = self._get_remote_filename(remote_filename)
+
                 except Exception as e:
                     failure_cb(filename, remote_filename, int(time.time() - start_time))
                     self._logger.exception("Uploading to sdwire failed: {}".format(e))
                     self.sdwrite_notify_error("Uploading to sdwire failed: {}".format(e))
                 else:
                     self._logger.info("Upload of {} as {} done in {:.2f}s".format(filename, remote_filename, time.time() - start_time))
-                    success_cb(filename, remote_filename, int(time.time() - start_time))
+                    success_cb(filename, return_filename, int(time.time() - start_time))
             except Exception as e:
                 failure_cb(filename, remote_filename, int(time.time() - start_time))
                 self._logger.exception("Unknown problem: {}".format(e))
@@ -210,7 +222,9 @@ class SdwirePlugin(octoprint.plugin.SettingsPlugin,
         thread = threading.Thread(target = sdwire_run_upload)
         thread.daemon = True
         thread.start()
-        return remote_filename
+
+        # doesn't really matter as filename from success callback takes precedence
+        return return_filename
 
     ##~~ Softwareupdate hook
 
