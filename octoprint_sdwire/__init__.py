@@ -1,6 +1,7 @@
 # coding=utf-8
 from __future__ import absolute_import
 
+import datetime
 import logging
 import os
 import subprocess
@@ -179,9 +180,12 @@ class SdwirePlugin(octoprint.plugin.SettingsPlugin,
                 return False
 
             self._logger.debug("Mounting sdwire SD Card")
-            if not self._run_cmd(["/usr/bin/sudo",  "/usr/bin/mount", "UUID={}".format(uuid), self.mdir_name, "-o", "uid={}".format(os.getuid())]):
-                self.sdwrite_notify_error("Mounting SD card with UUID {} failed.".format(uuid))
-                return False
+            # keep file creation dates compatible with windows/macos
+            time_offset = round((datetime.datetime.now().timestamp() - datetime.datetime.utcnow().timestamp())/60)
+            if not self._run_cmd(["/usr/bin/sudo",  "/usr/bin/mount", "UUID={}".format(uuid), self.mdir_name, "-o", "uid={},time_offset={}".format(os.getuid(), time_offset)]):
+                if not self._run_cmd(["/usr/bin/sudo",  "/usr/bin/mount", "UUID={}".format(uuid), self.mdir_name, "-o", "uid={}".format(os.getuid())]):
+                    self.sdwrite_notify_error("Mounting SD card with UUID {} failed.".format(uuid))
+                    return False
             self._logger.debug("Sdwire mounted")
 
         def sdwire_umount(uuid):
