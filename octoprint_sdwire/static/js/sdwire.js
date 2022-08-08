@@ -12,8 +12,6 @@ $(function() {
 	self.filesViewModel = parameters[0];
 
 	self.onDataUpdaterPluginMessage = function(plugin, data) {
-                console.log(plugin);
-                console.log(data);
 		if (plugin != "sdwire") {
 			return;
 		}
