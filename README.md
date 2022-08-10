@@ -183,7 +183,7 @@ This change redirects all `local` calls to `sdcard` calls.
 @@ -32,6 +32,9 @@ frontend public
  backend octoprint
          acl needs_scheme req.hdr_cnt(X-Scheme) eq 0
- 
+
 +        reqrep ^([^\ :]*)\ /api/files/local\ (.*)    \1\ /api/files/sdcard\ \2
 +        reqrep ^([^\ :]*)\ /api/files/local/(.*)     \1\ /api/files/sdcard/\2
 +
@@ -230,4 +230,3 @@ backend octoprint-ps
         server octoprint2 127.0.0.1:5000
         errorfile 503 /etc/haproxy/errors/503-no-octoprint.http
 ```
-
