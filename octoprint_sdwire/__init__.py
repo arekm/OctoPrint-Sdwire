@@ -109,10 +109,10 @@ class SdwirePlugin(octoprint.plugin.SettingsPlugin,
 
         # Assume long file names support.
         if printer._comm._capability_supported(printer._comm.CAPABILITY_EXTENDED_M20):
-            remote_filename = return_filename = filename
+            remote_filename = filename
             self.lfn = True
         else:
-            remote_filename = return_filename = printer._get_free_remote_name(filename)
+            remote_filename = printer._get_free_remote_name(filename)
             self.lfn = False
 
         if not self._settings.get(["disk_uuid"]):
@@ -198,6 +198,8 @@ class SdwirePlugin(octoprint.plugin.SettingsPlugin,
         def sdwire_run_upload():
             try:
                 start_time = time.time()
+                return_filename = remote_filename
+
                 try:
 
                     uuid = self._settings.get(["disk_uuid"])
@@ -228,7 +230,7 @@ class SdwirePlugin(octoprint.plugin.SettingsPlugin,
         thread.start()
 
         # doesn't really matter as filename from success callback takes precedence
-        return return_filename
+        return remote_filename
 
     ##~~ Softwareupdate hook
 
