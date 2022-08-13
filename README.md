@@ -177,6 +177,7 @@ Use `Upload to SD` `OctoPrint` functionality to test writting to sdwire sd card.
 This change redirects all `local` calls to `sdcard` calls.
 
 
+Haproxy 1.x (OctoPi before 1.0)
 ```diff
 --- /etc/haproxy/haproxy.cfg	2022-08-02 23:39:54.140947758 +0200
 +++ /etc/haproxy/haproxy.cfg	2022-08-02 23:38:30.572050242 +0200
@@ -192,10 +193,26 @@ This change redirects all `local` calls to `sdcard` calls.
          reqadd X-Scheme:\ http if needs_scheme !{ ssl_fc }
 ```
 
-And haproxy restart:
+Haproxy 2.x (OctoPi 1.0+)
+```diff
+--- /etc/haproxy/haproxy.cfg	2022-08-13 13:34:23.790730913 +0100
++++ /etc/haproxy/haproxy.cfg	2022-08-13 13:35:15.857005071 +0100
+@@ -32,6 +32,8 @@ frontend public
+ backend octoprint
+         acl needs_scheme req.hdr_cnt(X-Scheme) eq 0
+
++        http-request replace-path /api/files/local($|/.*) /api/files/sdcard\1
++
+         http-request replace-path ^([^\ :]*)\ /(.*) \1\ /\2
+         http-request add-header X-Scheme https if needs_scheme { ssl_fc }
+         http-request add-header X-Scheme http if needs_scheme !{ ssl_fc }
+
+```
+
+And haproxy reload:
 
 ````
-systemctl restart haproxy
+systemctl reload haproxy
 ````
 
 There is also a solution If you want to keep `local` API available but still get `PrusaSlicer` to upload and print from sd card.
@@ -207,6 +224,7 @@ host:that_port.
 
 Example, ports 1080 for http and 1443 for https:
 
+Haproxy 1.x (OctoPi before 1.0)
 ```
 frontend public-ps
         bind :::1080 v4v6
@@ -228,5 +246,29 @@ backend octoprint-ps
         reqadd X-Scheme:\ http if needs_scheme !{ ssl_fc }
         option forwardfor
         server octoprint2 127.0.0.1:5000
+        errorfile 503 /etc/haproxy/errors/503-no-octoprint.http
+```
+
+Haproxy 2.x (OctoPi 1.0+)
+```
+frontend public-ps
+        bind :::1080 v4v6
+        bind :::1443 v4v6 ssl crt /etc/ssl/snakeoil.pem
+        option forwardfor except 127.0.0.1
+        use_backend webcam if { path_beg /webcam/ }
+        use_backend webcam_hls if { path_beg /hls/ }
+        use_backend webcam_hls if { path_beg /jpeg/ }
+        default_backend octoprint
+
+backend octoprint-ps
+        acl needs_scheme req.hdr_cnt(X-Scheme) eq 0
+
+        http-request replace-path /api/files/local($|/.*) /api/files/sdcard\1
+
+        http-request replace-path ^([^\ :]*)\ /(.*) \1\ /\2
+        http-request add-header X-Scheme https if needs_scheme { ssl_fc }
+        http-request add-header X-Scheme http if needs_scheme !{ ssl_fc }
+        option forwardfor
+        server octoprint1 127.0.0.1:5000
         errorfile 503 /etc/haproxy/errors/503-no-octoprint.http
 ```
