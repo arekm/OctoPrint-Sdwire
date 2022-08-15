@@ -1,0 +1,13 @@
+name: "Pull Request Automation"
+on:
+  pull_request_target:
+    #types: ["opened", "synchronize", "reopened", "edited", "labeled", "unlabeled"]
+    types: ["opened"]
+
+jobs:
+  pr-automation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: OctoPrint-Sdwire/actions/pr-validation@main
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}

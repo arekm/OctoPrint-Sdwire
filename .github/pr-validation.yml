@@ -1,0 +1,9 @@
+approve_label: "approved"
+problem_label: "needs some work"
+ignore_label: "skip validation"
+
+allowed_targets: ["devel"]
+forbidden_sources: ["main", "master"]
+
+check_can_modify: true
+create_review: true

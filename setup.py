@@ -63,6 +63,22 @@ plugin_ignored_packages = []
 # Remove it if you would like to support Python 2 as well as 3 (not recommended).
 additional_setup_parameters = {"python_requires": ">=3,<4"}
 
+# Additional requirements for optional install options and/or OS-specific dependencies
+extra_requires = {
+    # Dependencies for development
+    "develop": [
+        # Testing dependencies
+        "ddt",
+        "mock>=4,<5",
+        "pytest-doctest-custom>=1.0.0,<2",
+        "pytest>=6.2.5,<7",
+        # pre-commit
+        "pre-commit",
+        # profiler
+        "pyinstrument",
+    ],
+}
+
 ########################################################################################################################
 
 from setuptools import setup
@@ -98,5 +114,6 @@ if len(additional_setup_parameters):
     from octoprint.util import dict_merge
 
     setup_parameters = dict_merge(setup_parameters, additional_setup_parameters)
+    setup_parameters = dict_merge(setup_parameters, {'extras_require': extra_requires})
 
 setup(**setup_parameters)
