@@ -85,6 +85,12 @@ class SdwirePlugin(
         return True
 
     def _get_remote_filename(self, filename):
+        # wait up to 10s for sd card to appear
+        for _i in range(100):
+            if self._printer._comm.isSdReady():
+                break
+            time.sleep(0.1)
+
         files = self._printer.get_sd_files(refresh=True)
         return next(
             (
