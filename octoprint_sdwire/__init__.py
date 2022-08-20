@@ -84,22 +84,43 @@ class SdwirePlugin(
             return False
         return True
 
-    def _get_remote_filename(self, filename):
+    def _get_remote_filename(self, filename, timestamp):
+        if not self.lfn:
+            return filename
+
         # wait up to 10s for sd card to appear
         for _i in range(100):
-            if self._printer._comm.isSdReady():
+            sdready = self._printer._comm.isSdReady()
+            if sdready:
                 break
             time.sleep(0.1)
 
         files = self._printer.get_sd_files(refresh=True)
-        return next(
-            (
-                item["name"]
-                for item in files
-                if item["display"] == filename and item["name"]
-            ),
-            filename,
-        )
+        # Exact match.
+        for item in files:
+            if item["display"] == filename and item["name"]:
+                self._logger.debug(
+                    "Found short filename {} for {}".format(filename, item["name"])
+                )
+                return item["name"]
+        # Partial match since printers have limited filename length (56 characters on prusa MK3).
+        printer_supported_filename_length = 20
+        if len(filename) > printer_supported_filename_length:
+            for item in files:
+                if (
+                    len(item["display"]) > printer_supported_filename_length
+                    and filename.startswith(item["display"])
+                    and item["name"]
+                    and item["date"]
+                    and int(item["date"]) >= timestamp
+                ):
+                    self._logger.debug(
+                        "Found short filename {} for {} by partial match".format(
+                            item["name"], filename
+                        )
+                    )
+                    return item["name"]
+        return filename
 
     def sdwrite_notify_error(self, message):
         self._plugin_manager.send_plugin_message(self._identifier, dict(error=message))
@@ -276,8 +297,9 @@ class SdwirePlugin(
 
                     # We try to return short file name to octoprint anyway because
                     # most firmwares don't support things like M23 with long filename.
-                    if self.lfn:
-                        return_filename = self._get_remote_filename(remote_filename)
+                    return_filename = self._get_remote_filename(
+                        remote_filename, start_time
+                    )
 
                 except Exception as e:
                     failure_cb(filename, remote_filename, int(time.time() - start_time))
