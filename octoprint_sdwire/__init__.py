@@ -11,6 +11,8 @@ import time
 import octoprint.plugin
 from octoprint.events import Events
 
+from . import _vfatdir
+
 
 class SdwirePlugin(
     octoprint.plugin.SettingsPlugin,
@@ -84,16 +86,36 @@ class SdwirePlugin(
             return False
         return True
 
-    def _get_remote_filename(self, filename, timestamp):
-        if not self.lfn:
-            return filename
-
+    def _wait_for_sdcard(self):
+        sdready = False
         # wait up to 10s for sd card to appear
         for _i in range(100):
             sdready = self._printer._comm.isSdReady()
             if sdready:
                 break
             time.sleep(0.1)
+        return sdready
+
+    def _get_vfat_remote_filename(self, vfatdir, filename):
+        try:
+            short_name = _vfatdir.get_short_name(vfatdir, filename)
+        except Exception as e:
+            self._logger.exception("Getting vfat remote filename failed: {}".format(e))
+            return None
+
+        if short_name:
+            short_name = short_name.decode().lower()
+            self._logger.debug(
+                "Found short filename {} for {} using vfat ioctl".format(
+                    short_name, filename
+                )
+            )
+            return short_name
+
+        return None
+
+    def _get_remote_filename(self, filename, timestamp):
+        self._wait_for_sdcard()
 
         files = self._printer.get_sd_files(refresh=True)
         # Exact match.
@@ -108,7 +130,8 @@ class SdwirePlugin(
         if len(filename) > printer_supported_filename_length:
             for item in files:
                 if (
-                    len(item["display"]) > printer_supported_filename_length
+                    item["display"]
+                    and len(item["display"]) > printer_supported_filename_length
                     and filename.startswith(item["display"])
                     and item["name"]
                     and item["date"]
@@ -120,7 +143,7 @@ class SdwirePlugin(
                         )
                     )
                     return item["name"]
-        return filename
+        return None
 
     def sdwrite_notify_error(self, message):
         self._plugin_manager.send_plugin_message(self._identifier, dict(error=message))
@@ -268,6 +291,7 @@ class SdwirePlugin(
                     )
                     return False
             self._logger.debug("Sdwire mounted")
+            return True
 
         def sdwire_umount(uuid):
             self._logger.debug("Umounting sdwire")
@@ -277,29 +301,37 @@ class SdwirePlugin(
                 self._run_cmd(["/usr/bin/sudo", "/usr/bin/umount", self.mdir_name])
             self.sdwire_switch(mode="sd")
             self.mdir.cleanup()
+            return True
 
         def sdwire_run_upload():
             try:
                 start_time = time.time()
-                return_filename = remote_filename
+                short_filename = None
 
                 try:
 
                     uuid = self._settings.get(["disk_uuid"])
                     sdwire_set_progress(0)
-                    sdwire_mount(uuid)
-                    sdwire_copyfile(
-                        path,
-                        os.path.join(self.mdir.name, remote_filename),
-                        sdwire_set_progress,
-                    )
-                    sdwire_umount(uuid)
+                    if sdwire_mount(uuid):
+                        sdwire_copyfile(
+                            path,
+                            os.path.join(self.mdir.name, remote_filename),
+                            sdwire_set_progress,
+                        )
 
-                    # We try to return short file name to octoprint anyway because
-                    # most firmwares don't support things like M23 with long filename.
-                    return_filename = self._get_remote_filename(
-                        remote_filename, start_time
-                    )
+                        if self.lfn:
+                            # Try to find short filename using vfat ioctl
+                            short_filename = self._get_vfat_remote_filename(
+                                self.mdir.name, remote_filename
+                            )
+
+                        sdwire_umount(uuid)
+
+                        # Fallback to querying printer for short filename.
+                        if self.lfn and not short_filename:
+                            short_filename = self._get_remote_filename(
+                                remote_filename, start_time
+                            )
 
                 except Exception as e:
                     failure_cb(filename, remote_filename, int(time.time() - start_time))
@@ -313,7 +345,12 @@ class SdwirePlugin(
                             filename, remote_filename, time.time() - start_time
                         )
                     )
-                    success_cb(filename, return_filename, int(time.time() - start_time))
+                    success_cb(
+                        filename,
+                        short_filename if short_filename else remote_filename,
+                        int(time.time() - start_time),
+                    )
+
             except Exception as e:
                 failure_cb(filename, remote_filename, int(time.time() - start_time))
                 self._logger.exception("Unknown problem: {}".format(e))

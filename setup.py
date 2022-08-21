@@ -81,7 +81,12 @@ extra_requires = {
 
 ########################################################################################################################
 
-from setuptools import setup
+from setuptools import setup, Extension
+
+extensions = [
+        Extension("octoprint_sdwire._vfatdir", ["src/_vfatdir.c"])
+        ]
+
 
 try:
     import octoprint_setuptools
@@ -114,6 +119,6 @@ if len(additional_setup_parameters):
     from octoprint.util import dict_merge
 
     setup_parameters = dict_merge(setup_parameters, additional_setup_parameters)
-    setup_parameters = dict_merge(setup_parameters, {'extras_require': extra_requires})
+    setup_parameters = dict_merge(setup_parameters, {'extras_require': extra_requires, 'ext_modules': extensions})
 
 setup(**setup_parameters)
