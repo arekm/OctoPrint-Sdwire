@@ -258,7 +258,7 @@ frontend public-ps
         use_backend webcam if { path_beg /webcam/ }
         use_backend webcam_hls if { path_beg /hls/ }
         use_backend webcam_hls if { path_beg /jpeg/ }
-        default_backend octoprint
+        default_backend octoprint-ps
 
 backend octoprint-ps
         acl needs_scheme req.hdr_cnt(X-Scheme) eq 0
