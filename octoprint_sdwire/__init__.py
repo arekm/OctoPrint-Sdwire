@@ -86,10 +86,10 @@ class SdwirePlugin(
             return False
         return True
 
-    def _wait_for_sdcard(self):
+    def _wait_for_sdcard(self, timeout=10):
         sdready = False
-        # wait up to 10s for sd card to appear
-        for _i in range(100):
+        # wait up to timeout for sd card to appear
+        for _i in range(timeout * 10):
             sdready = self._printer._comm.isSdReady()
             if sdready:
                 break
@@ -154,7 +154,7 @@ class SdwirePlugin(
         elif mode.lower() == "usb":
             mode_opt = "--ts"
             self._printer.commands("M22")
-            time.sleep(0.1)
+            time.sleep(0.2)
         else:
             self._logger.error("sdwire_switch(): unknown mode: {}".format(mode))
             return False
@@ -168,11 +168,11 @@ class SdwirePlugin(
                 mode_opt,
             ]
         ):
-            time.sleep(0.1)
+            time.sleep(0.2)
             self._logger.debug("Sdwire switched to {}.".format(mode.upper()))
             if mode.lower() == "sd":
                 self._printer.commands("M21")
-                time.sleep(0.1)
+                self._wait_for_sdcard(timeout=1)
                 self._printer.refresh_sd_files()
             return True
         self._logger.debug("Switching sdwire to {} failed.".format(mode.upper()))
