@@ -24,31 +24,18 @@ class SdwirePlugin(
     def __init__(self):
         super(SdwirePlugin, self).__init__()
         self._logger = logging.getLogger("octoprint.plugins.sdwire")
-        self.started = False
         self.lfn = False
 
-    def on_after_startup(self):
+    def on_startup(self, host, port):
         self._logger.info(
-            "OctoPrint-Sdwire loaded (sdwire_serial={}, disk_uuid={})".format(
+            "OctoPrint-Sdwire (sdwire_serial={}, disk_uuid={})".format(
                 self._settings.get(["sdwire_serial"]), self._settings.get(["disk_uuid"])
             )
         )
 
-        if not self._printer._comm.isSdReady() and self._check_printer_state():
-            self.sdwire_switch(mode="usb")
-            self.sdwire_switch(mode="sd")
-
-        self.started = True
-
     def on_event(self, event, payload):
-        if event == Events.CONNECTED:
-            if (
-                self.started
-                and not self._printer._comm.isSdReady()
-                and self._check_printer_state()
-            ):
-                self.sdwire_switch(mode="usb")
-                self.sdwire_switch(mode="sd")
+        if event == Events.CONNECTING:
+            self.sdwire_low_switch(mode="sd")
 
     ##~~ SettingsPlugin mixin
 
@@ -90,15 +77,22 @@ class SdwirePlugin(
             return False
         return True
 
-    def _wait_for_sdcard(self, timeout):
-        sdready = False
+    # wait for sd card being available or unavailable
+    def _wait_for_sdcard_state(self, timeout, wait_for_notavailable):
+        sdready = wait_for_notavailable
         # wait up to timeout for sd card to appear
         for _i in range(timeout * 10):
             sdready = self._printer._comm.isSdReady()
-            if sdready:
+            if sdready != wait_for_notavailable:
                 break
             time.sleep(0.1)
-        return sdready
+        return sdready != wait_for_notavailable
+
+    def _wait_for_sdcard(self, timeout):
+        return self._wait_for_sdcard_state(timeout, False)
+
+    def _wait_for_nosdcard(self, timeout):
+        return self._wait_for_sdcard_state(timeout, True)
 
     def _get_vfat_remote_filename(self, vfatdir, filename):
         try:
@@ -152,35 +146,57 @@ class SdwirePlugin(
     def sdwrite_notify_error(self, message):
         self._plugin_manager.send_plugin_message(self._identifier, dict(error=message))
 
+    def sdwire_low_switch(self, mode):
+        mode = mode.lower()
+        if mode not in ["sd", "usb"]:
+            self._logger.error("sdwire_low_switch(): unknown mode: {}".format(mode))
+            return False
+
+        if mode == "sd":
+            # switching to SD is unreliable on some printers, so try harder
+            actions = ["--ts", "--dut", "--ts", "--dut"]
+        elif mode == "usb":
+            actions = ["--dut", "--ts"]
+
+        self._logger.debug("Switching sdwire to {}.".format(mode.upper()))
+
+        for a in actions:
+            if not self._run_cmd(
+                [
+                    "/usr/bin/sudo",
+                    self._settings.get(["sd_mux_ctrl"]),
+                    "--device-serial={}".format(self._settings.get(["sdwire_serial"])),
+                    a,
+                ]
+            ):
+                self._logger.debug(
+                    "Switching sdwire to {} failed.".format(mode.upper())
+                )
+                return False
+            time.sleep(0.3)
+
+        self._logger.debug("Sdwire switched to {}.".format(mode.upper()))
+        return True
+
     def sdwire_switch(self, mode):
-        if mode.lower() == "sd":
-            mode_opt = "--dut"
-        elif mode.lower() == "usb":
-            mode_opt = "--ts"
-            self._printer.commands("M22", force=True)
-            time.sleep(0.2)
-        else:
+        mode = mode.lower()
+        if mode not in ["usb", "sd"]:
             self._logger.error("sdwire_switch(): unknown mode: {}".format(mode))
             return False
 
-        self._logger.debug("Switching sdwire to {}.".format(mode.upper()))
-        if self._run_cmd(
-            [
-                "/usr/bin/sudo",
-                self._settings.get(["sd_mux_ctrl"]),
-                "--device-serial={}".format(self._settings.get(["sdwire_serial"])),
-                mode_opt,
-            ]
-        ):
-            time.sleep(0.2)
-            self._logger.debug("Sdwire switched to {}.".format(mode.upper()))
-            if mode.lower() == "sd":
-                self._printer.commands("M21", force=True)
-                self._wait_for_sdcard(timeout=1)
-                self._printer.refresh_sd_files()
-            return True
-        self._logger.debug("Switching sdwire to {} failed.".format(mode.upper()))
-        return False
+        if mode == "usb":
+            self._printer.commands("M22", force=True)
+            self._wait_for_nosdcard(timeout=2)
+
+        if not self.sdwire_low_switch(mode):
+            return False
+
+        if mode == "sd":
+            self._printer.commands("M21", force=True)
+            self._wait_for_sdcard(timeout=2)
+            self._printer.refresh_sd_files()
+
+        return True
 
     def sdwire_upload(
         self, printer, filename, path, start_cb, success_cb, failure_cb, *args, **kwargs
