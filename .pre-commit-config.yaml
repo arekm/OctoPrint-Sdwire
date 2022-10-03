@@ -41,6 +41,7 @@ repos:
       - id: flake8
         additional_dependencies:
           - flake8-bugbear==22.3.20
+          - importlib-metadata>=1.1.0,<4.3
   - repo: https://github.com/pre-commit/mirrors-prettier
     rev: v2.5.1
     hooks:
