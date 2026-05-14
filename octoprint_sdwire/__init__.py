@@ -44,8 +44,13 @@ class SdwirePlugin(
             disk_uuid="",
         )
 
+    ##~~ TemplatePlugin mixin
+
     def get_template_configs(self):
         return [{"type": "settings", "custom_bindings": False}]
+
+    def is_template_autoescaped(self):
+        True
 
     ##~~ AssetPlugin mixin
 
