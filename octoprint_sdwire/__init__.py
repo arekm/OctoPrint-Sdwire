@@ -1,5 +1,3 @@
-from __future__ import absolute_import
-
 import datetime
 import logging
 import os
@@ -22,7 +20,7 @@ class SdwirePlugin(
     octoprint.plugin.EventHandlerPlugin,
 ):
     def __init__(self):
-        super(SdwirePlugin, self).__init__()
+        super().__init__()
         self._logger = logging.getLogger("octoprint.plugins.sdwire")
         self.lfn = False
 
@@ -66,7 +64,7 @@ class SdwirePlugin(
                 )
             )
             return False
-        self._logger.debug("running command ({}) succeeded: {}".format(cmd, output))
+        self._logger.debug(f"running command ({cmd}) succeeded: {output}")
         return True
 
     def _check_printer_state(self, notify=False):
@@ -98,7 +96,7 @@ class SdwirePlugin(
         try:
             short_name = _vfatdir.get_short_name(vfatdir, filename)
         except Exception as e:
-            self._logger.exception("Getting vfat remote filename failed: {}".format(e))
+            self._logger.exception(f"Getting vfat remote filename failed: {e}")
             return None
 
         if short_name:
@@ -149,7 +147,7 @@ class SdwirePlugin(
     def sdwire_low_switch(self, mode):
         mode = mode.lower()
         if mode not in ["sd", "usb"]:
-            self._logger.error("sdwire_low_switch(): unknown mode: {}".format(mode))
+            self._logger.error(f"sdwire_low_switch(): unknown mode: {mode}")
             return False
 
         if mode == "sd":
@@ -158,7 +156,7 @@ class SdwirePlugin(
         elif mode == "usb":
             actions = ["--dut", "--ts"]
 
-        self._logger.debug("Switching sdwire to {}.".format(mode.upper()))
+        self._logger.debug(f"Switching sdwire to {mode.upper()}.")
 
         for a in actions:
             if not self._run_cmd(
@@ -169,19 +167,17 @@ class SdwirePlugin(
                     a,
                 ]
             ):
-                self._logger.debug(
-                    "Switching sdwire to {} failed.".format(mode.upper())
-                )
+                self._logger.debug(f"Switching sdwire to {mode.upper()} failed.")
                 return False
             time.sleep(0.3)
 
-        self._logger.debug("Sdwire switched to {}.".format(mode.upper()))
+        self._logger.debug(f"Sdwire switched to {mode.upper()}.")
         return True
 
     def sdwire_switch(self, mode):
         mode = mode.lower()
         if mode not in ["usb", "sd"]:
-            self._logger.error("sdwire_switch(): unknown mode: {}".format(mode))
+            self._logger.error(f"sdwire_switch(): unknown mode: {mode}")
             return False
 
         if mode == "usb":
@@ -201,7 +197,6 @@ class SdwirePlugin(
     def sdwire_upload(
         self, printer, filename, path, start_cb, success_cb, failure_cb, *args, **kwargs
     ):
-
         # Assume long file names support.
         if printer._comm._capability_supported(printer._comm.CAPABILITY_EXTENDED_M20):
             remote_filename = filename
@@ -224,7 +219,7 @@ class SdwirePlugin(
             failure_cb(filename, remote_filename, 0)
             return False
 
-        self._logger.info("Uploading {} to sdwire sd card.".format(remote_filename))
+        self._logger.info(f"Uploading {remote_filename} to sdwire sd card.")
         start_cb(filename, remote_filename)
 
         def sdwire_set_progress(progress):
@@ -237,7 +232,6 @@ class SdwirePlugin(
                 file_size = os.stat(fsrc.fileno()).st_size
 
                 with open(dst, "wb") as fdst:
-
                     bufsize = 1024 * 1024
 
                     fsrc_read = fsrc.read
@@ -270,13 +264,11 @@ class SdwirePlugin(
                 time.sleep(0.1)
 
             if disk:
-                self._logger.debug("Disk found for UUID: {}".format(uuid))
+                self._logger.debug(f"Disk found for UUID: {uuid}")
             else:
-                self._logger.info(
-                    "SD card UUID {} was not found in the system!".format(uuid)
-                )
+                self._logger.info(f"SD card UUID {uuid} was not found in the system!")
                 self.sdwrite_notify_error(
-                    "SD card UUID {} was not found in the system!".format(uuid)
+                    f"SD card UUID {uuid} was not found in the system!"
                 )
                 return False
 
@@ -293,24 +285,24 @@ class SdwirePlugin(
                 [
                     "/usr/bin/sudo",
                     "/usr/bin/mount",
-                    "UUID={}".format(uuid),
+                    f"UUID={uuid}",
                     self.mdir_name,
                     "-o",
-                    "uid={},time_offset={}".format(os.getuid(), time_offset),
+                    f"uid={os.getuid()},time_offset={time_offset}",
                 ]
             ):
                 if not self._run_cmd(
                     [
                         "/usr/bin/sudo",
                         "/usr/bin/mount",
-                        "UUID={}".format(uuid),
+                        f"UUID={uuid}",
                         self.mdir_name,
                         "-o",
-                        "uid={}".format(os.getuid()),
+                        f"uid={os.getuid()}",
                     ]
                 ):
                     self.sdwrite_notify_error(
-                        "Mounting SD card with UUID {} failed.".format(uuid)
+                        f"Mounting SD card with UUID {uuid} failed."
                     )
                     return False
             self._logger.debug("Sdwire mounted")
@@ -318,9 +310,7 @@ class SdwirePlugin(
 
         def sdwire_umount(uuid):
             self._logger.debug("Umounting sdwire")
-            if not self._run_cmd(
-                ["/usr/bin/sudo", "/usr/bin/umount", "UUID={}".format(uuid)]
-            ):
+            if not self._run_cmd(["/usr/bin/sudo", "/usr/bin/umount", f"UUID={uuid}"]):
                 self._run_cmd(["/usr/bin/sudo", "/usr/bin/umount", self.mdir_name])
             self.sdwire_switch(mode="sd")
             self.mdir.cleanup()
@@ -332,7 +322,6 @@ class SdwirePlugin(
                 short_filename = None
 
                 try:
-
                     uuid = self._settings.get(["disk_uuid"])
                     sdwire_set_progress(0)
                     if sdwire_mount(uuid):
@@ -358,10 +347,8 @@ class SdwirePlugin(
 
                 except Exception as e:
                     failure_cb(filename, remote_filename, int(time.time() - start_time))
-                    self._logger.exception("Uploading to sdwire failed: {}".format(e))
-                    self.sdwrite_notify_error(
-                        "Uploading to sdwire failed: {}".format(e)
-                    )
+                    self._logger.exception(f"Uploading to sdwire failed: {e}")
+                    self.sdwrite_notify_error(f"Uploading to sdwire failed: {e}")
                 else:
                     self._logger.info(
                         "Upload of {} as {} done in {:.2f}s".format(
@@ -376,8 +363,8 @@ class SdwirePlugin(
 
             except Exception as e:
                 failure_cb(filename, remote_filename, int(time.time() - start_time))
-                self._logger.exception("Unknown problem: {}".format(e))
-                self.sdwrite_notify_error("Unknown problem: {}".format(e))
+                self._logger.exception(f"Unknown problem: {e}")
+                self.sdwrite_notify_error(f"Unknown problem: {e}")
 
         thread = threading.Thread(target=sdwire_run_upload)
         thread.daemon = True
