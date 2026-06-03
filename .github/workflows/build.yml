@@ -12,25 +12,24 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11-dev"]
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: 🏗 Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
       - name: 🏗 Install build dependencies
         run: |
-          pip install wheel --user
-          pip install octoprint[develop]
+          pip install build
       - name: 🔨 Build a binary wheel and a source tarball
         run: |
-          python setup.py sdist bdist_wheel
+          python -m build --sdist --wheel
       - name: ⬆ Upload build result
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: dist-${{ matrix.python-version }}
           path: dist
@@ -39,14 +38,13 @@ jobs:
     name: 🧹 Pre-commit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - name: 🏗 Set up Python 3.7
-        uses: actions/setup-python@v4
+      - uses: actions/checkout@v4
+      - name: 🏗 Set up Python 3.13
+        uses: actions/setup-python@v5
         with:
-          python-version: 3.7
+          python-version: 3.13
       - name: 🏗 Set up dev dependencies
         run: |
-          pip install octoprint[develop]
           pip install -e .[develop]
       - name: 🚀 Run pre-commit
         run: |
@@ -57,17 +55,17 @@ jobs:
     needs: build
     strategy:
       matrix:
-        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11-dev"]
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
         installable: ["wheel", "sdist"]
     runs-on: ubuntu-latest
     steps:
       - name: ⬇ Download build result
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: dist-${{ matrix.python-version }}
           path: dist
       - name: 🏗 Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
       - name: 🏗 Install OctoPrint
@@ -76,8 +74,8 @@ jobs:
       - name: 🚀 Install wheel
         if: matrix.installable == 'wheel'
         run: |
-          pip install dist/OctoPrint_*-*.whl
+          pip install dist/*.whl
       - name: 🚀 Install source tarball
         if: matrix.installable == 'sdist'
         run: |
-          pip install dist/OctoPrint-*.tar.gz
+          pip install dist/*.tar.gz
