@@ -11,26 +11,26 @@ jobs:
     name: 🔨 Build distribution
     runs-on: ubuntu-latest
     strategy:
+      # let healthy versions finish even if one matrix entry breaks
+      fail-fast: false
       matrix:
-        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11-dev"]
+        # 3.7 dropped: the pyproject build requires setuptools>=68 (Python >=3.8)
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
 
     steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
+      - uses: actions/checkout@v6
       - name: 🏗 Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: 🏗 Install build dependencies
         run: |
-          pip install wheel --user
-          pip install octoprint[develop]
+          pip install build
       - name: 🔨 Build a binary wheel and a source tarball
         run: |
-          python setup.py sdist bdist_wheel
+          python -m build
       - name: ⬆ Upload build result
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v7
         with:
           name: dist-${{ matrix.python-version }}
           path: dist
@@ -39,15 +39,16 @@ jobs:
     name: 🧹 Pre-commit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - name: 🏗 Set up Python 3.7
-        uses: actions/setup-python@v4
+      - uses: actions/checkout@v6
+      # 3.10: newest Python the pinned hooks (black 22.3, flake8 3.9) run on;
+      # 3.7 is gone from ubuntu-latest (24.04) runners
+      - name: 🏗 Set up Python 3.10
+        uses: actions/setup-python@v6
         with:
-          python-version: 3.7
+          python-version: "3.10"
       - name: 🏗 Set up dev dependencies
         run: |
-          pip install octoprint[develop]
-          pip install -e .[develop]
+          pip install pre-commit
       - name: 🚀 Run pre-commit
         run: |
           pre-commit run --all-files --show-diff-on-failure
@@ -56,18 +57,20 @@ jobs:
     name: 🧪 Installation tests
     needs: build
     strategy:
+      fail-fast: false
       matrix:
-        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11-dev"]
+        # stable OctoPrint caps requires-python at <3.14
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]
         installable: ["wheel", "sdist"]
     runs-on: ubuntu-latest
     steps:
       - name: ⬇ Download build result
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v8
         with:
           name: dist-${{ matrix.python-version }}
           path: dist
       - name: 🏗 Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: 🏗 Install OctoPrint
@@ -76,8 +79,39 @@ jobs:
       - name: 🚀 Install wheel
         if: matrix.installable == 'wheel'
         run: |
-          pip install dist/OctoPrint_*-*.whl
+          pip install dist/*.whl
       - name: 🚀 Install source tarball
         if: matrix.installable == 'sdist'
         run: |
-          pip install dist/OctoPrint-*.tar.gz
+          pip install dist/*.tar.gz
+
+  test-install-next:
+    name: 🧪 Installation test (OctoPrint 2.0 prerelease)
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.13", "3.14"]
+        installable: ["wheel", "sdist"]
+    runs-on: ubuntu-latest
+    steps:
+      - name: ⬇ Download build result
+        uses: actions/download-artifact@v8
+        with:
+          name: dist-${{ matrix.python-version }}
+          path: dist
+      - name: 🏗 Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: 🏗 Install OctoPrint prerelease
+        run: |
+          pip install --pre octoprint
+      - name: 🚀 Install wheel
+        if: matrix.installable == 'wheel'
+        run: |
+          pip install dist/*.whl
+      - name: 🚀 Install source tarball
+        if: matrix.installable == 'sdist'
+        run: |
+          pip install dist/*.tar.gz
