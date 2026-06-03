@@ -8,6 +8,6 @@ jobs:
   pr-automation:
     runs-on: ubuntu-latest
     steps:
-      - uses: OctoPrint-Sdwire/actions/pr-validation@main
+      - uses: OctoPrint/actions/pr-validation@main
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
