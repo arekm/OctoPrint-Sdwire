@@ -1,5 +1,3 @@
-from __future__ import absolute_import
-
 import datetime
 import logging
 import os
@@ -22,9 +20,10 @@ class SdwirePlugin(
     octoprint.plugin.EventHandlerPlugin,
 ):
     def __init__(self):
-        super(SdwirePlugin, self).__init__()
+        super().__init__()
         self._logger = logging.getLogger("octoprint.plugins.sdwire")
-        self.lfn = False
+
+    ##~~ StartupPlugin mixin
 
     def on_startup(self, host, port):
         self._logger.info(
@@ -32,6 +31,8 @@ class SdwirePlugin(
                 self._settings.get(["sdwire_serial"]), self._settings.get(["disk_uuid"])
             )
         )
+
+    ##~~ EventHandlerPlugin mixin
 
     def on_event(self, event, payload):
         if event == Events.CONNECTING:
@@ -46,8 +47,13 @@ class SdwirePlugin(
             disk_uuid="",
         )
 
+    ##~~ TemplatePlugin mixin
+
     def get_template_configs(self):
         return [{"type": "settings", "custom_bindings": False}]
+
+    def is_template_autoescaped(self):
+        return True
 
     ##~~ AssetPlugin mixin
 
@@ -66,7 +72,7 @@ class SdwirePlugin(
                 )
             )
             return False
-        self._logger.debug("running command ({}) succeeded: {}".format(cmd, output))
+        self._logger.debug(f"running command ({cmd}) succeeded: {output}")
         return True
 
     def _check_printer_state(self, notify=False):
@@ -82,7 +88,7 @@ class SdwirePlugin(
         sdready = wait_for_notavailable
         # wait up to timeout for sd card to appear
         for _i in range(timeout * 10):
-            sdready = self._printer._comm.isSdReady()
+            sdready = self._printer.is_sd_ready()
             if sdready != wait_for_notavailable:
                 break
             time.sleep(0.1)
@@ -98,7 +104,7 @@ class SdwirePlugin(
         try:
             short_name = _vfatdir.get_short_name(vfatdir, filename)
         except Exception as e:
-            self._logger.exception("Getting vfat remote filename failed: {}".format(e))
+            self._logger.exception(f"Getting vfat remote filename failed: {e}")
             return None
 
         if short_name:
@@ -112,44 +118,13 @@ class SdwirePlugin(
 
         return None
 
-    def _get_remote_filename(self, filename, timestamp):
-        self._wait_for_sdcard(10)
-
-        files = self._printer.get_sd_files(refresh=True)
-        # Exact match.
-        for item in files:
-            if item["display"] == filename and item["name"]:
-                self._logger.debug(
-                    "Found short filename {} for {}".format(filename, item["name"])
-                )
-                return item["name"]
-        # Partial match since printers have limited filename length (56 characters on prusa MK3).
-        printer_supported_filename_length = 20
-        if len(filename) > printer_supported_filename_length:
-            for item in files:
-                if (
-                    item["display"]
-                    and len(item["display"]) > printer_supported_filename_length
-                    and filename.startswith(item["display"])
-                    and item["name"]
-                    and item["date"]
-                    and int(item["date"]) >= timestamp
-                ):
-                    self._logger.debug(
-                        "Found short filename {} for {} by partial match".format(
-                            item["name"], filename
-                        )
-                    )
-                    return item["name"]
-        return None
-
     def sdwrite_notify_error(self, message):
         self._plugin_manager.send_plugin_message(self._identifier, dict(error=message))
 
     def sdwire_low_switch(self, mode):
         mode = mode.lower()
         if mode not in ["sd", "usb"]:
-            self._logger.error("sdwire_low_switch(): unknown mode: {}".format(mode))
+            self._logger.error(f"sdwire_low_switch(): unknown mode: {mode}")
             return False
 
         if mode == "sd":
@@ -158,7 +133,7 @@ class SdwirePlugin(
         elif mode == "usb":
             actions = ["--dut", "--ts"]
 
-        self._logger.debug("Switching sdwire to {}.".format(mode.upper()))
+        self._logger.debug(f"Switching sdwire to {mode.upper()}.")
 
         for a in actions:
             if not self._run_cmd(
@@ -169,19 +144,17 @@ class SdwirePlugin(
                     a,
                 ]
             ):
-                self._logger.debug(
-                    "Switching sdwire to {} failed.".format(mode.upper())
-                )
+                self._logger.debug(f"Switching sdwire to {mode.upper()} failed.")
                 return False
             time.sleep(0.3)
 
-        self._logger.debug("Sdwire switched to {}.".format(mode.upper()))
+        self._logger.debug(f"Sdwire switched to {mode.upper()}.")
         return True
 
     def sdwire_switch(self, mode):
         mode = mode.lower()
         if mode not in ["usb", "sd"]:
-            self._logger.error("sdwire_switch(): unknown mode: {}".format(mode))
+            self._logger.error(f"sdwire_switch(): unknown mode: {mode}")
             return False
 
         if mode == "usb":
@@ -201,31 +174,22 @@ class SdwirePlugin(
     def sdwire_upload(
         self, printer, filename, path, start_cb, success_cb, failure_cb, *args, **kwargs
     ):
-
-        # Assume long file names support.
-        if printer._comm._capability_supported(printer._comm.CAPABILITY_EXTENDED_M20):
-            remote_filename = filename
-            self.lfn = True
-        else:
-            remote_filename = printer._get_free_remote_name(filename)
-            self.lfn = False
-
         if not self._settings.get(["disk_uuid"]):
             self.sdwrite_notify_error("SD card UUID was not configured!")
-            failure_cb(filename, remote_filename, 0)
+            failure_cb(filename, filename, 0)
             return False
 
         if not self._settings.get(["sdwire_serial"]):
             self.sdwrite_notify_error("Sdwire serial was not configured!")
-            failure_cb(filename, remote_filename, 0)
+            failure_cb(filename, filename, 0)
             return False
 
         if not self._check_printer_state(notify=True):
-            failure_cb(filename, remote_filename, 0)
+            failure_cb(filename, filename, 0)
             return False
 
-        self._logger.info("Uploading {} to sdwire sd card.".format(remote_filename))
-        start_cb(filename, remote_filename)
+        self._logger.info(f"Uploading {filename} to sdwire sd card.")
+        start_cb(filename, filename)
 
         def sdwire_set_progress(progress):
             self._plugin_manager.send_plugin_message(
@@ -237,7 +201,6 @@ class SdwirePlugin(
                 file_size = os.stat(fsrc.fileno()).st_size
 
                 with open(dst, "wb") as fdst:
-
                     bufsize = 1024 * 1024
 
                     fsrc_read = fsrc.read
@@ -270,13 +233,11 @@ class SdwirePlugin(
                 time.sleep(0.1)
 
             if disk:
-                self._logger.debug("Disk found for UUID: {}".format(uuid))
+                self._logger.debug(f"Disk found for UUID: {uuid}")
             else:
-                self._logger.info(
-                    "SD card UUID {} was not found in the system!".format(uuid)
-                )
+                self._logger.info(f"SD card UUID {uuid} was not found in the system!")
                 self.sdwrite_notify_error(
-                    "SD card UUID {} was not found in the system!".format(uuid)
+                    f"SD card UUID {uuid} was not found in the system!"
                 )
                 return False
 
@@ -293,24 +254,24 @@ class SdwirePlugin(
                 [
                     "/usr/bin/sudo",
                     "/usr/bin/mount",
-                    "UUID={}".format(uuid),
+                    f"UUID={uuid}",
                     self.mdir_name,
                     "-o",
-                    "uid={},time_offset={}".format(os.getuid(), time_offset),
+                    f"uid={os.getuid()},time_offset={time_offset}",
                 ]
             ):
                 if not self._run_cmd(
                     [
                         "/usr/bin/sudo",
                         "/usr/bin/mount",
-                        "UUID={}".format(uuid),
+                        f"UUID={uuid}",
                         self.mdir_name,
                         "-o",
-                        "uid={}".format(os.getuid()),
+                        f"uid={os.getuid()}",
                     ]
                 ):
                     self.sdwrite_notify_error(
-                        "Mounting SD card with UUID {} failed.".format(uuid)
+                        f"Mounting SD card with UUID {uuid} failed."
                     )
                     return False
             self._logger.debug("Sdwire mounted")
@@ -318,9 +279,7 @@ class SdwirePlugin(
 
         def sdwire_umount(uuid):
             self._logger.debug("Umounting sdwire")
-            if not self._run_cmd(
-                ["/usr/bin/sudo", "/usr/bin/umount", "UUID={}".format(uuid)]
-            ):
+            if not self._run_cmd(["/usr/bin/sudo", "/usr/bin/umount", f"UUID={uuid}"]):
                 self._run_cmd(["/usr/bin/sudo", "/usr/bin/umount", self.mdir_name])
             self.sdwire_switch(mode="sd")
             self.mdir.cleanup()
@@ -332,59 +291,49 @@ class SdwirePlugin(
                 short_filename = None
 
                 try:
-
                     uuid = self._settings.get(["disk_uuid"])
                     sdwire_set_progress(0)
                     if sdwire_mount(uuid):
                         sdwire_copyfile(
                             path,
-                            os.path.join(self.mdir.name, remote_filename),
+                            os.path.join(self.mdir.name, filename),
                             sdwire_set_progress,
                         )
 
-                        if self.lfn:
-                            # Try to find short filename using vfat ioctl
-                            short_filename = self._get_vfat_remote_filename(
-                                self.mdir.name, remote_filename
-                            )
+                        # Try to find short filename using vfat ioctl
+                        short_filename = self._get_vfat_remote_filename(
+                            self.mdir.name, filename
+                        )
 
                         sdwire_umount(uuid)
 
-                        # Fallback to querying printer for short filename.
-                        if self.lfn and not short_filename:
-                            short_filename = self._get_remote_filename(
-                                remote_filename, start_time
-                            )
-
                 except Exception as e:
-                    failure_cb(filename, remote_filename, int(time.time() - start_time))
-                    self._logger.exception("Uploading to sdwire failed: {}".format(e))
-                    self.sdwrite_notify_error(
-                        "Uploading to sdwire failed: {}".format(e)
-                    )
+                    failure_cb(filename, filename, int(time.time() - start_time))
+                    self._logger.exception(f"Uploading to sdwire failed: {e}")
+                    self.sdwrite_notify_error(f"Uploading to sdwire failed: {e}")
                 else:
                     self._logger.info(
-                        "Upload of {} as {} done in {:.2f}s".format(
-                            filename, remote_filename, time.time() - start_time
+                        "Upload of {} done in {:.2f}s".format(
+                            filename, time.time() - start_time
                         )
                     )
                     success_cb(
                         filename,
-                        short_filename if short_filename else remote_filename,
+                        short_filename if short_filename else filename,
                         int(time.time() - start_time),
                     )
 
             except Exception as e:
-                failure_cb(filename, remote_filename, int(time.time() - start_time))
-                self._logger.exception("Unknown problem: {}".format(e))
-                self.sdwrite_notify_error("Unknown problem: {}".format(e))
+                failure_cb(filename, filename, int(time.time() - start_time))
+                self._logger.exception(f"Unknown problem: {e}")
+                self.sdwrite_notify_error(f"Unknown problem: {e}")
 
         thread = threading.Thread(target=sdwire_run_upload)
         thread.daemon = True
         thread.start()
 
         # doesn't really matter as filename from success callback takes precedence
-        return remote_filename
+        return filename
 
     ##~~ Softwareupdate hook
 

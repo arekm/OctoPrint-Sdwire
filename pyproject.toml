@@ -26,6 +26,7 @@ Homepage = "https://github.com/arekm/OctoPrint-Sdwire"
 [project.optional-dependencies]
 develop = [
     "go-task-bin",
+    "pre-commit",
 ]
 
 [project.readme]

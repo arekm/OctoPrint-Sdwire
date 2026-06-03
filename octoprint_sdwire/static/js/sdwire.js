@@ -29,7 +29,7 @@ $(function () {
                     title: "Sdwire Error",
                     text:
                         '<div class="row-fluid"><p>Looks like your settings are not correct or there was an error.</p><p><pre style="padding-top: 5px;">' +
-                        data["error"] +
+                        _.escape(data["error"]) +
                         "</pre></p>",
                     hide: true
                 });
