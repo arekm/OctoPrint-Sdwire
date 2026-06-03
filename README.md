@@ -1,6 +1,6 @@
 # OctoPrint-Sdwire
 
-This plugin uses [sdwire hardware](https://3mdeb.com/shop/open-source-hardware/open-source-hardware-3mdeb/sdwire/)
+This plugin uses [sdwire hardware](https://shop.3mdeb.com/product/sdwire/)
 to handle *fast* "Upload to SD".
 
 ![title](screenshots/sdwire-octoprint.jpg "Uploading to sdwire")
@@ -72,9 +72,12 @@ apt-get install libpopt-dev libftdi1-dev
 * build sd-mux-ctrl binary
 
 ````
-git clone https://git.tizen.org/cgit/tools/testlab/sd-mux
+git clone https://github.com/arekm/sd-mux
 mkdir sd-mux/build && cd sd-mux/build && cmake ../ && make
 ````
+
+(this is a mirror of the [upstream repository](https://git.tizen.org/cgit/tools/testlab/sd-mux/),
+which is unchanged since 2020 and hosted on infrastructure with recurring outages)
 
 * place `build/src/sd-mux-ctrl` binary in `/usr/local/sbin/sd-mux-ctrl` on your host machine (or in different location) or just run:
 
@@ -165,9 +168,9 @@ Use `Upload to SD` `OctoPrint` functionality to test writting to sdwire sd card.
 
 
 ## Documentation and links
-* [sdwire hardware](https://3mdeb.com/shop/open-source-hardware/open-source-hardware-3mdeb/sdwire/)
-* [sdwire description](https://wiki.tizen.org/SDWire)
-* [sd-mux-ctl software](https://git.tizen.org/cgit/tools/testlab/sd-mux/)
+* [sdwire hardware](https://shop.3mdeb.com/product/sdwire/)
+* [sdwire description](https://web.archive.org/web/20240121081917/https://wiki.tizen.org/SDWire) (archived; [original](https://wiki.tizen.org/SDWire) is frequently down)
+* [sd-mux-ctl software](https://github.com/arekm/sd-mux) (mirror of [upstream](https://git.tizen.org/cgit/tools/testlab/sd-mux/))
 * [sdwire setup and usage](https://docs.dasharo.com/transparent-validation/sd-wire/getting-started/)
 
 ## Octoprint - redirecting all `api/files/local` calls to `api/files/sdcard`
